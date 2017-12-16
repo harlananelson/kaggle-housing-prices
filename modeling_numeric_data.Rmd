@@ -1,0 +1,674 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+```{r,message=FALSE}
+source(file.path('.','library.R'))
+```
+### Read in the Data
+Create a function to read in the data.
+
+```{r}
+read_data <- function(name){   
+  #' Load a data set from the data directory using a string lookup
+  #'
+  #' @param name A text string that will match the partial name of a data file in the data directory
+  #' @examples
+  #'d <- read_data('train')
+  my_path <- file.path('.','data')    
+  my_dir  <- list.files(my_path)   
+  my_file <- grep(name, my_dir,value=TRUE)   
+  d <- read_csv(file.path(my_path,my_file))  
+}
+
+```
+
+
+An indicator field for the presence of a second floor is created.
+```{r}
+t <- read_data('train') %>%
+  mutate(SalePriceLog = log(SalePrice)) %>%
+  mutate(secondFloor  = `2ndFlrSF` > 0) %>%
+  mutate(X1stFlrSF    = `1stFlrSF` ) %>%
+  mutate(X2ndFlrSF    = `2ndFlrSF` ) %>%
+  mutate(X3SsnPorch   = `3SsnPorch`)  %>%
+  select(-`1stFlrSF`, -`2ndFlrSF`, `3SsnPorch` )
+```
+
+The columns contain data and each column has a data class.  There are qualitative and quantitative fields.
+```{r}
+sapply(t,class)
+```
+The Kaggle data description page give the descriptions of these fields and they can be added to the data set.
+```{r}
+var.labels <- c(
+    SalePrice    = "The property's sale price in dollars." ,
+    MSSubClass    = "The building class",
+    MSZoning      = "The general zoning classification",
+    LotFrontage   = "Linear feet of street connected to property",
+    LotArea       = "Lot size in square feet",
+    Street        = "Type of road access",
+    Alley         = "Type of alley access",
+    LotShape      = "General shape of property",
+    LandContour   = "Flatness of the property",
+    Utilities     = "Type of utilities available",
+    LotConfig     = "Lot configuration",
+    LandSlope     = "Slope of property",
+    Neighborhood  = "Physical locations within Ames city limits",
+    Condition1    = "Proximity to main road or railroad",
+    Condition2    = "Proximity to main road or railroad (if a second is present)",
+    BldgType      = "Type of dwelling",
+    HouseStyle    = "Style of dwelling",
+    OverallQual   = "Overall material and finish quality",
+    OverallCond   = "Overall condition rating",
+    YearBuilt     = "Original construction date",
+    YearRemodAdd  = "Remodel date",
+    RoofStyle     = "Type of roof",
+    RoofMatl      = "Roof material",
+    Exterior1st   = "Exterior covering on house",
+    Exterior2nd   = "Exterior covering on house (if more than one material)",
+    MasVnrType    = "Masonry veneer type",
+    MasVnrArea    = "Masonry veneer area in square feet",
+    ExterQual     = "Exterior material quality",
+    ExterCond     = "Present condition of the material on the exterior",
+    Foundation    = "Type of foundation",
+    BsmtQual      = "Height of the basement",
+    BsmtCond      = "General condition of the basement",
+    BsmtExposure  = "Walkout or garden level basement walls",
+    BsmtFinType1  = "Quality of basement finished area",
+    BsmtFinSF1    = "Type 1 finished square feet",
+    BsmtFinType2  = "Quality of second finished area (if present)",
+    BsmtFinSF2    = "Type 2 finished square feet",
+    BsmtUnfSF     = "Unfinished square feet of basement area",
+    TotalBsmtSF   = "Total square feet of basement area",
+    Heating       = "Type of heating",
+    HeatingQC     = "Heating quality and condition",
+    CentralAir    = "Central air conditioning",
+    Electrical    = "Electrical system",
+    X1stFlrSF    = "First Floor square feet",
+    X2ndFlrSF    = "Second floor square feet",
+    LowQualFinSF  = "Low quality finished square feet (all floors)",
+    GrLivArea     = "Above grade (ground) living area square feet",
+    BsmtFullBath  = "Basement full bathrooms",
+    BsmtHalfBath  = "Basement half bathrooms",
+    FullBath      = "Full bathrooms above grade",
+    HalfBath      = "Half baths above grade",
+    BedroomAbvGr  = "Number of bedrooms above basement level",
+    KitchenAbvGr  = "Number of kitchens",
+    KitchenQual   = "Kitchen quality",
+    TotRmsAbvGrd  = "Total rooms above grade (does not include bathrooms)",
+    Functional    = "Home functionality rating",
+    Fireplaces    = "Number of fireplaces",
+    FireplaceQu   = "Fireplace quality",
+    GarageType    = "Garage location",
+    GarageYrBlt   = "Year garage was built",
+    GarageFinish  = "Interior finish of the garage",
+    GarageCars    = "Size of garage in car capacity",
+    GarageArea    = "Size of garage in square feet",
+    GarageQual    = "Garage quality",
+    GarageCond    = "Garage condition",
+    PavedDrive    = "Paved driveway",
+    WoodDeckSF    = "Wood deck area in square feet",
+    OpenPorchSF   = "Open porch area in square feet",
+    EnclosedPorch = "Enclosed porch area in square feet",
+    X3SsnPorch    = "Three season porch area in square feet",
+    ScreenPorch   = "Screen porch area in square feet",
+    PoolArea      = "Pool area in square feet",
+    PoolQC        = "Pool quality",
+    Fence         = "Fence quality",
+    MiscFeature   = "Miscellaneous feature not covered in other categories",
+    MiscVal       = "$Value of miscellaneous feature",
+    MoSold        = "Month Sold",
+    YrSold        = "Year Sold",
+    SaleType      = "Type of sale",
+    SaleCondition = "Condition of sale",
+    SalePriceLog  = "Log of Sale Price",
+    secondFloor   = "House has Second Floor"
+)
+t <- Hmisc::upData(t,labels = var.labels)
+Hmisc::label(t)
+```
+Make sure the labels work.
+```{r}
+label(t$OverallQual)
+label(t$SalePriceLog)
+```
+### Plot the data
+
+
+```{r}
+t %>% ggplot()  + 
+  aes(X1stFlrSF,SalePriceLog,color=secondFloor)+
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha=0.35) + 
+  ggtitle(paste(label(t$SalePrice),label(t$X1stFlrSF))) +
+  #geom_smooth(method='loess',formula = y~x) + 
+  #geom_smooth(method='lm',formula = y~x) + 
+  xlab(label(t$X1stFlrSF)) +
+  ylab(label(t$SalePrice) )
+```
+
+## First Model
+First we will experiment with the numeric fields. We will leave the category fields aside for now.
+```{r}
+t_types <- sapply(t,typeof)
+t_types
+names(t)
+keep_fields <- !(names(t) %in% c('SalePrice','Id'))
+keep_fields
+
+t_numeric_fields <- t_types[t_types != 'character' & keep_fields ]
+t_numeric_fields
+t_numeric <- t[names(t_numeric_fields)]
+sapply(t_numeric,typeof)
+
+head(t_numeric)
+names(t_numeric)
+
+sapply(t_numeric,typeof)
+```
+### Corrrelation
+So now we search for factors that are significantly correlated and order those by strength of correlation.
+```{r}
+model_num = 1
+num_of_canadate_features = 15
+sig <- 0.0010
+response <- "SalePriceLog"
+names(t_numeric)
+
+# Calculate the correlation matrix
+res2 <- rcorr(as.matrix(t_numeric))
+res2$P
+# It is a list of matricies with names "r","n" and "P"
+c(typeof(res2),names(res2))
+
+# Identify the significant correlations 
+dim(res2$P)
+
+res2_price_p <- res2$P[response,]
+res2_price_p
+correlation_significant<-res2_price_p <= sig & !is.na(res2_price_p)
+```
+Subset to only fields significantly correlated with there response
+```{r}
+
+# extract the correlations of the response to other fields
+res2_price_r <- res2$r[response,]
+res2_price_r
+
+# Select the significant correlations
+features_significant <- res2_price_r[correlation_significant]
+features_significant 
+
+# Sort by correlation
+features_significant <- features_significant[order(abs(features_significant),decreasing=TRUE)]
+features_significant
+names(features_significant)
+
+remove_response <- !names(features_significant) %in% c('SalePriceLog',response)
+remove_response
+features_significant <- features_significant[remove_response]
+features_significant
+
+#redo the t_selected
+t_selected <- t_numeric %>% select(c(names(features_significant)[1:num_of_canadate_features],response)) 
+names(t_selected)
+# Note that the correlation for OverallQual is zero.  It was the field used last time, so the correlation
+#should be zero
+```
+
+```{r}
+features_significant 
+names(t_selected) 
+```
+
+A few versions of the correlation matrix
+```{r}
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='ellipse',order="AOE")
+
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='shade',order="AOE")
+
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot.mixed(number.cex = 0.5,order = "AOE",tl.pos='lt')
+#t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='circle',method='ellipse')
+```
+
+Here is the top feature to try
+```{r}
+feature_list <-list()
+selected<-names(features_significant)[1]
+selected 
+selected_label<-label(t_numeric[selected])
+selected_label
+feature_list[[model_num]] <- selected
+str(feature_list)
+```
+Calculate a model using this variable
+```{r}
+names(t_numeric)
+try(t_numeric <- t_numeric %>% select(-.hat,-.sigma,-.cooksd,-.std.resid,-.se.fit,-.fitted,-.resid,-influential),silent=TRUE)
+names(t_numeric)
+feature_list
+my_formula <- paste0('SalePriceLog ~ ',paste(feature_list,collapse = '+ ', sep=" " ))
+str(my_formula)
+model_1 <- t_numeric %>% lm(my_formula,data=.)
+t_numeric<- model_1 %>% augment(type.predict = 'response',type.residuals = 'response',data=t_numeric) %>%
+  mutate(model_1_resid = .resid) %>%
+  mutate(influential = .cooksd > 4/length(SalePriceLog))
+head(t_numeric)
+```
+Check the fit using the Kaggle criteria
+```{r}
+rmse(model_1,t_numeric)
+```
+```{r}
+t_numeric[t_numeric$influential,]
+```
+```{r}
+model_1_parameters <- model_1 %>% tidy
+print(model_1_parameters)
+```
+The R^2 is very good.
+```{r}
+model_1_fit <- model_1 %>% glance
+print(model_1_fit)
+```
+
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.fitted,SalePriceLog,color=influential) +
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha = 0.35) +
+  geom_line(aes(.fitted,.fitted)) +
+  ggtitle(selected_label) +
+  xlab('fitted') +
+  ylab("Sale Price")   
+```
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.resid,SalePriceLog,color=influential) +
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha = 0.35) +
+  ggtitle(selected_label) +
+  xlab('residuals') +
+  ylab("Sale Price")   
+```
+This fitted by residual should show no pattern.
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.fitted,.resid)+
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha=0.35) + 
+  ggtitle(paste("Residuals Plot")) 
+```
+
+```{r}
+test <- read_data('test') %>%
+  mutate(secondFloor  = `2ndFlrSF` > 0) %>%
+  mutate(X1stFlrSF    = `1stFlrSF` ) %>%
+  mutate(X2ndFlrSF    = `2ndFlrSF` ) %>%
+  mutate(X3SsnPorch   = `3SsnPorch`)  %>%
+  select(-`1stFlrSF`, -`2ndFlrSF`, `3SsnPorch` )
+```
+
+```{r}
+p <- test %>%  
+  add_predictions(model_1)  %>%
+  select(Id,pred) %>%
+  mutate(SalePrice = exp(pred)) %>%
+  select(Id,SalePrice)
+head(p)
+write_csv(p,file.path('.','data','model_1.csv'))
+```
+
+
+
+## Model 2
+
+### Corrrelation
+So now we search for factors that are significantly correlated and order those by strength of correlation.
+```{r}
+names(t_numeric)
+try(t_numeric <- t_numeric %>% select(-.hat,-.sigma,-.cooksd,-.std.resid,-.se.fit,-.fitted,-.resid,-influential),silent=TRUE)
+names(t_numeric)
+```
+
+```{r}
+model_num = 2
+num_of_canadate_features = 15
+sig <- 0.0010
+response <- "model_1_resid"
+names(t_numeric)
+
+# Calculate the correlation matrix
+res2 <- rcorr(as.matrix(t_numeric))
+res2$P
+# It is a list of matricies with names "r","n" and "P"
+c(typeof(res2),names(res2))
+
+# Identify the significant correlations 
+dim(res2$P)
+
+res2_price_p <- res2$P[response,]
+res2_price_p
+correlation_significant<-res2_price_p <= sig & !is.na(res2_price_p)
+```
+Subset to only fields significantly correlated with there response
+```{r}
+
+# extract the correlations of the response to other fields
+res2_price_r <- res2$r[response,]
+res2_price_r
+
+# Select the significant correlations
+features_significant <- res2_price_r[correlation_significant]
+features_significant 
+
+# Sort by correlation
+features_significant <- features_significant[order(abs(features_significant),decreasing=TRUE)]
+features_significant
+names(features_significant)
+
+remove_response <- !names(features_significant) %in% c('SalePriceLog',response)
+remove_response
+features_significant <- features_significant[remove_response]
+features_significant
+
+#redo the t_selected
+t_selected <- t_numeric %>% select(c(names(features_significant)[1:num_of_canadate_features],response)) 
+names(t_selected)
+# Note that the correlation for OverallQual is zero.  It was the field used last time, so the correlation
+#should be zero
+```
+
+```{r}
+features_significant 
+names(t_selected) 
+```
+
+A few versions of the correlation matrix
+```{r}
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='ellipse',order="AOE")
+
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='shade',order="AOE")
+
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot.mixed(number.cex = 0.5,order = "AOE",tl.pos='lt')
+#t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='circle',method='ellipse')
+```
+
+Here is the top feature to try
+```{r}
+#feature_list <-list()
+selected<-names(features_significant)[1]
+selected 
+selected_label<-label(t_numeric[selected])
+selected_label
+feature_list[[model_num]] <- selected
+str(feature_list)
+```
+Calculate a model using this variable
+```{r}
+
+names(t_numeric)
+feature_list
+my_formula <- paste0('SalePriceLog ~ ',paste(feature_list,collapse = '+ ', sep=" " ))
+str(my_formula)
+model_2 <- t_numeric %>% lm(my_formula,data=.)
+t_numeric<- model_2 %>% augment(type.predict = 'response',type.residuals = 'response',data=t_numeric) %>%
+  mutate(model_2_resid = .resid) %>%
+  mutate(influential = .cooksd > 4/length(SalePriceLog))
+head(t_numeric)
+```
+Check the fit using the Kaggle criteria
+```{r}
+rmse(model_2,t_numeric)
+```
+```{r}
+t_numeric[t_numeric$influential,]
+```
+```{r}
+model_2_parameters <- model_2 %>% tidy
+print(model_2_parameters)
+```
+The R^2 is very good.
+```{r}
+model_2_fit <- model_2 %>% glance
+print(model_1_fit)
+```
+
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.fitted,SalePriceLog,color=influential) +
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha = 0.35) +
+  geom_line(aes(.fitted,.fitted)) +
+  ggtitle(selected_label) +
+  xlab('fitted') +
+  ylab("Sale Price")   
+```
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.resid,SalePriceLog,color=influential) +
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha = 0.35) +
+  ggtitle(selected_label) +
+  xlab('residuals') +
+  ylab("Sale Price")   
+```
+This fitted by residual should show no pattern.
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.fitted,.resid)+
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha=0.35) + 
+  ggtitle(paste("Residuals Plot")) 
+```
+
+
+
+```{r}
+p <- test %>%  
+  add_predictions(model_2)  %>%
+  select(Id,pred) %>%
+  mutate(SalePrice = exp(pred)) %>%
+  select(Id,SalePrice)
+head(p)
+write_csv(p,file.path('.','data','model_2.csv'))
+```
+## Model 3
+```{r}
+names(t_numeric)
+try(t_numeric <- t_numeric %>% select(-.hat,-.sigma,-.cooksd,-.std.resid,-.se.fit,-.fitted,-.resid,-influential),silent=TRUE)
+try(t_numeric <- t_numeric %>% select(-model_1_resid))
+names(t_numeric)
+
+```
+
+### Corrrelation
+So now we search for factors that are significantly correlated and order those by strength of correlation.
+```{r}
+names(t_numeric)
+model_num = 3
+num_of_canadate_features = 15
+sig <- 0.0010
+response <- "model_2_resid"
+names(t_numeric)
+
+# Calculate the correlation matrix
+res2 <- rcorr(as.matrix(t_numeric))
+res2$P
+# It is a list of matricies with names "r","n" and "P"
+c(typeof(res2),names(res2))
+
+# Identify the significant correlations 
+dim(res2$P)
+
+res2_price_p <- res2$P[response,]
+res2_price_p
+correlation_significant<-res2_price_p <= sig & !is.na(res2_price_p)
+```
+Subset to only fields significantly correlated with there response
+```{r}
+
+# extract the correlations of the response to other fields
+res2_price_r <- res2$r[response,]
+res2_price_r
+
+# Select the significant correlations
+features_significant <- res2_price_r[correlation_significant]
+features_significant 
+
+# Sort by correlation
+features_significant <- features_significant[order(abs(features_significant),decreasing=TRUE)]
+features_significant
+names(features_significant)
+
+remove_response <- !names(features_significant) %in% c('SalePriceLog',response)
+remove_response
+features_significant <- features_significant[remove_response]
+features_significant
+
+#redo the t_selected
+t_selected <- t_numeric %>% select(c(names(features_significant)[1:num_of_canadate_features],response)) 
+names(t_selected)
+# Note that the correlation for OverallQual is zero.  It was the field used last time, so the correlation
+#should be zero
+```
+
+```{r}
+features_significant 
+names(t_selected) 
+```
+
+A few versions of the correlation matrix
+```{r}
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='ellipse',order="AOE")
+
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='shade',order="AOE")
+
+t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot.mixed(number.cex = 0.5,order = "AOE",tl.pos='lt')
+#t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot(method='circle',method='ellipse')
+```
+
+Here is the top feature to try
+```{r}
+#feature_list <-list()
+selected<-names(features_significant)[1]
+selected 
+selected_label<-label(t_numeric[selected])
+selected_label
+feature_list[[model_num]] <- selected
+str(feature_list)
+```
+Calculate a model using this variable
+```{r}
+names(t_numeric)
+feature_list
+my_formula <- paste0('SalePriceLog ~ ',paste(feature_list,collapse = '+ ', sep=" " ))
+str(my_formula)
+model_3 <- t_numeric %>% lm(my_formula,data=.)
+t_numeric<- model_3 %>% augment(type.predict = 'response',type.residuals = 'response',data=t_numeric) %>%
+  mutate(model_3_resid = .resid) %>%
+  mutate(influential = .cooksd > 4/length(SalePriceLog))
+head(t_numeric)
+```
+Check the fit using the Kaggle criteria
+```{r}
+rmse(model_2,t_numeric)
+```
+```{r}
+t_numeric[t_numeric$influential,]
+```
+```{r}
+model_3_parameters <- model_3 %>% tidy
+print(model_3_parameters)
+```
+The R^2 is very good.
+```{r}
+model_3_fit <- model_3 %>% glance
+print(model_1_fit)
+```
+
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.fitted,SalePriceLog,color=influential) +
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha = 0.35) +
+  geom_line(aes(.fitted,.fitted)) +
+  ggtitle(selected_label) +
+  xlab('fitted') +
+  ylab("Sale Price")   
+```
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.resid,SalePriceLog,color=influential) +
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha = 0.35) +
+  ggtitle(selected_label) +
+  xlab('residuals') +
+  ylab("Sale Price")   
+```
+This fitted by residual should show no pattern.
+```{r}
+t_numeric %>% ggplot()  + 
+  aes(.fitted,.resid)+
+  scale_y_continuous(labels = comma)  + 
+  scale_x_continuous(labels = comma) +
+  geom_point(alpha=0.35) + 
+  ggtitle(paste("Residuals Plot")) 
+```
+
+
+
+```{r}
+p <- test %>%  
+  add_predictions(model_3)  %>%
+  select(Id,pred) %>%
+  mutate(SalePrice = exp(pred)) %>%
+  select(Id,SalePrice)
+head(p)
+write_csv(p,file.path('.','data','model_3.csv'))
+```
+
+```{r}
+names(t)
+```
+```{r}
+m <- data.frame(model.matrix(Id ~ MSZoning,t))
+names(m)
+```
+
+```{r}
+model <- t %>% lm(SalePriceLog ~ MSZoning,data=.)
+model %>% tidy
+```
+```{r}
+model %>% glance
+```
+```{r}
+names(t)
+my_corr <- function(feature) {
+  f_sub <-substitute(feature)
+  my_f <- paste("SalePriceLog ~",f_sub)
+  model <- t %>% lm(my_f,data=.)
+  model %>% glance
+}
+
+my_corr(PavedDrive)
+
+```
+
+
+
+
+
