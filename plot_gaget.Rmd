@@ -1,0 +1,40 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(shiny)
+library(miniUI)
+
+myPlot <- function(data,xvar,yvar) {
+  ui <- miniPage(
+    gadgetTitleBar("Drag to Select Points"),
+    miniContentPanel(
+      plotOutput("plot",height = "100%", brush = "brush")
+      
+    )
+  )
+  
+  server <- function(input,output,session) {
+
+    observeEvent(input$cancel,{
+      stopApp(NULL)
+    })    
+    observeEvent(input$done, {
+      returnValue <- brushedPoints(data,input$brush)
+      stopApp(returnValue)
+    })
+    output$plot <- renderPlot({
+      ggplot(data,aes_string(xvar,yvar)) + geom_point()
+    })
+  }
+  
+  runGadget(ui,server)
+  
+}
+```
+```{r}
+myPlot(mtcars,"hp",'mpg')
+```
+
