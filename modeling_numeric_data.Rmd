@@ -127,6 +127,9 @@ var.labels <- c(
     SalePriceLog  = "Log of Sale Price",
     secondFloor   = "House has Second Floor"
 )
+```
+
+```{r}
 t <- Hmisc::upData(t,labels = var.labels)
 Hmisc::label(t)
 ```
@@ -135,8 +138,17 @@ Make sure the labels work.
 label(t$OverallQual)
 label(t$SalePriceLog)
 ```
+```{r}
+class(t)
+typeof(t)
+```
+
 ### Plot the data
 
+```{r}
+head(label(t))
+head(t)
+```
 
 ```{r}
 t %>% ggplot()  + 

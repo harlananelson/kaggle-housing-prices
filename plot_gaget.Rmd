@@ -4,8 +4,10 @@ output: html_notebook
 ---
 
 ```{r}
+library(ggplot2)
 library(shiny)
 library(miniUI)
+
 
 myPlot <- function(data,xvar,yvar) {
   ui <- miniPage(
@@ -34,6 +36,7 @@ myPlot <- function(data,xvar,yvar) {
   
 }
 ```
+
 ```{r}
 myPlot(mtcars,"hp",'mpg')
 ```
