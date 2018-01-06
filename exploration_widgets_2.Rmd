@@ -1,0 +1,112 @@
+---
+title: "R Notebook"
+output: html_document
+runtime: shiny
+---
+
+```{r,message=FALSE,echo=FALSE,warning=FALSE}
+source(file.path('.','library.R'))
+```
+```{r,message=FALSE,echo=FALSE,warning=FALSE}
+source(file.path('.','read_kaggle_housing_data.R'))
+```
+
+```{r,echo=FALSE}
+      selectInput("predictor","Choose a Predictor:",  
+                  choices = names(t),selected = 'X1stFlrSF' )
+
+ #     plotOutput("plot",height = "100%", brush = "brush")  
+```
+```{r,echo=FALSE}
+      selectInput("color","Choose a Color:",  
+                  choices = names(t),selected = 'SaleCondition' )
+```
+
+
+
+```{r,echo=FALSE}
+data<-eventReactive(input$predictor,{
+  t
+  })
+```
+
+```{r,echo=FALSE}
+renderPlot({ 
+  ggplot(data(),aes_string(input$predictor,'SalePriceLog',color=input$color)) + geom_point() 
+  })
+```
+```{r,echo=FALSE}
+      selectInput("class","Choose a class:",  
+                  choices = names(t),selected = 'SaleCondition' )
+```
+```{r,echo=FALSE}
+renderPlot({ 
+  ggplot(data(),aes_string(input$class,'SalePriceLog',color=input$color)) + 
+    geom_violin()
+  })
+```
+```{r,echo=FALSE}
+      selectInput("predictors","Choose a Predictor:",  
+                  choices = names(t),selected = 'X1stFlrSF' , multiple = TRUE)
+
+ #     plotOutput("plot",height = "100%", brush = "brush")  
+```
+
+```{r,echo=FALSE}
+my_model<-eventReactive(input$predictors,{ 
+  my_formula <- paste0('SalePriceLog ~ ',paste(input$predictors,collapse = '+ ', sep=" " ))
+  my_model <- t %>% lm(my_formula,.)  
+})
+```
+```{r,echo=FALSE}
+t_augment<- eventReactive(input$predictors,{
+  my_model() %>% augment(type.predict = 'response',type.residuals = 'response',data=t) %>%
+  mutate(model_resid = .resid) %>%
+  mutate(influential = .cooksd > 4/length(SalePriceLog))
+})
+```
+#################
+```{r,eval=TRUE,echo=FALSE}
+renderPlot({ 
+  model_num = 1   
+  num_of_canadate_features = 15 
+  sig <- 0.0010 
+  response <- "SalePriceLog"  
+  t_types <- sapply(t_augment(),typeof)  
+  keep_fields <- !(names(t_augment()) %in% c('SalePrice','Id')) 
+  t_numeric_fields <- t_types[t_types != 'character' & keep_fields ] 
+  t_numeric <- t_augment()[names(t_numeric_fields)]
+  # Calculate the correlation matrix 
+  res2 <- rcorr(as.matrix(t_numeric)) 
+  res2_price_p <- res2$P[response,] 
+  correlation_significant<-res2_price_p <= sig & !is.na(res2_price_p) 
+  res2_price_r <- res2$r[response,]  
+  features_significant <- res2_price_r[correlation_significant]  
+  features_significant <- features_significant[order(abs(features_significant),decreasing=TRUE)] 
+  remove_response <- !names(features_significant) %in% c('SalePriceLog',response) 
+  features_significant <- features_significant[remove_response] 
+  t_selected <- t_numeric %>% select(c(names(features_significant)[1:num_of_canadate_features],response))  
+  t_selected %>% cor(use='pairwise.complete.obs') %>% corrplot.mixed(number.cex = 0.5,order = "AOE",tl.pos='lt')
+})
+```
+
+```{r,echo=FALSE}
+renderPlot({ 
+  ggplot(t_augment(),aes_string('model_resid','SalePriceLog',color=input$color)) + geom_point() 
+  })
+```
+```{r,echo=FALSE}
+renderTable(my_model() %>% glance)
+```
+```{r,echo=FALSE}
+renderTable(my_model() %>% tidy)
+```
+```{r,echo=FALSE,eval=FALSE}
+renderTable(t_augment())
+```
+
+
+
+
+
+
