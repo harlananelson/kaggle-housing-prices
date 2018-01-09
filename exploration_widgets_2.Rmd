@@ -10,6 +10,21 @@ source(file.path('.','library.R'))
 ```{r,message=FALSE,echo=FALSE,warning=FALSE}
 source(file.path('.','read_kaggle_housing_data.R'))
 ```
+```{r}
+find_fields <-function(d,target_type_of = 'character'){  
+  t_types <- sapply(d,type_of)  
+  return(t_types == target_type_of)
+}
+numeric_character <- function(d){  
+  (sapply(t,'n_distinct') <= 30) & (sapply(t, type_of) %in% c('integer','double'))
+}
+```
+```{r}
+possible_class<-function(d,num_distinct = 30){
+  (sapply(t,'n_distinct') <= num_distinct) 
+}
+```
+
 
 ```{r,echo=FALSE}
       selectInput("predictor","Choose a Predictor:",  
@@ -19,14 +34,29 @@ source(file.path('.','read_kaggle_housing_data.R'))
 ```
 ```{r,echo=FALSE}
       selectInput("color","Choose a Color:",  
-                  choices = names(t),selected = 'SaleCondition' )
+                  choices = names(t)[possible_class(d)],selected = 'SaleCondition' )
+```
+
+```{r,echo=FALSE,eval=FALSE}
+d <- tribble(
+  ~x,
+  1,
+  2
+)
+  
+myexpression2 <- 'x'
+f <- function(d,myvar,myexpression){
+  d %>% mutate(!!myvar := as.character(!!rlang::sym(myexpression2)))
+}
+
+f(d,'y','x')
 ```
 
 
-
 ```{r,echo=FALSE}
-data<-eventReactive(input$predictor,{
-  t
+data<-eventReactive(input$color,{
+  #MoSold
+  t %>% mutate(!!input$color := as.character(!!rlang::sym(input$color)))
   })
 ```
 
@@ -41,7 +71,7 @@ renderPlot({
 ```
 ```{r,echo=FALSE}
 renderPlot({ 
-  ggplot(data(),aes_string(input$class,'SalePriceLog',color=input$color)) + 
+  ggplot(data(),aes_string(input$class,'SalePriceLog',color=as.character(input$color))) + 
     geom_violin()
   })
 ```
