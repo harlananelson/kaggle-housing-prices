@@ -1,0 +1,24 @@
+---
+title: "Class Project"
+output: html_notebook
+---
+
+1. Find a Data Set to Analyse
+1. Describe the the data and problem to solve
+1. Use Linear Regression to fit a model
+1. Report Model equation.
+1. Diagnostic Plots
+1. Descriptive plot of the fit.
+1. Implement so interactive plots.
+1. use R notebook.
+1. Create a github prepository.
+1. Create a Docker image. (So others can run your anaysis)
+1. Try some automatic model selection methods and describe.  
+* stepwise
+* lasso
+* ridge
+* elastic net.
+* 5 fold cross validation
+
+
+
