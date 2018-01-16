@@ -1,3 +1,4 @@
+
 read_data <- function(name){   
   #' Load a data set from the data directory using a string lookup
   #'
@@ -102,5 +103,5 @@ var.labels <- c(
     SalePriceLog  = "Log of Sale Price",
     secondFloor   = "House has Second Floor"
 )
-#t <- Hmisc::upData(t,labels = var.labels)
-#Hmisc::label(t)
+t <- Hmisc::upData(t,labels = var.labels)
+Hmisc::label(t)

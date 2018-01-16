@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "r notebook"
 output: html_document
 runtime: shiny
 ---
@@ -7,34 +7,48 @@ runtime: shiny
 ```{r,message=FALSE,echo=FALSE,warning=FALSE}
 source(file.path('.','library.R'))
 ```
+
 ```{r,message=FALSE,echo=FALSE,warning=FALSE}
 source(file.path('.','read_kaggle_housing_data.R'))
 ```
+
 ```{r}
 find_fields <-function(d,target_type_of = 'character'){  
+  #' Identify fields in a data frame of a selected type_of
+  #' 
+  #' @param d The data frame
+  #' @param target_type_of The type_of for fields selected.
   t_types <- sapply(d,type_of)  
   return(t_types == target_type_of)
 }
-numeric_character <- function(d){  
-  (sapply(t,'n_distinct') <= 30) & (sapply(t, type_of) %in% c('integer','double'))
+numeric_character <- function(d,num_distinct = 30){  
+  #' Identify the fields that could be either nominal or interval.
+  #'
+  #' \code{numeric_character} If a field of type integer or double has less than num_distinct
+  #' levels, it might be nominal and not interval
+  #' @param d The data frame
+  (sapply(t,'n_distinct') <= num_distinct) & (sapply(t, type_of) %in% c('integer','double'))
 }
-```
-```{r}
 possible_class<-function(d,num_distinct = 30){
+  #' Identify fields the could be nominal
+  #' 
+  #' @param d The data frame
+  #' @param num_distinct Fields with less distinct levels might be nominal
   (sapply(t,'n_distinct') <= num_distinct) 
 }
 ```
 
 
 ```{r,echo=FALSE}
-      selectInput("predictor","Choose a Predictor:",  
-                  choices = names(t),selected = 'X1stFlrSF' )
+      selectinput("predictor","choose a predictor:",  
+                  choices = names(t),selected = 'x1stflrsf' )
 
- #     plotOutput("plot",height = "100%", brush = "brush")  
+ #     plotoutput("plot",height = "100%", brush = "brush")  
 ```
+
 ```{r,echo=FALSE}
-      selectInput("color","Choose a Color:",  
-                  choices = names(t)[possible_class(d)],selected = 'SaleCondition' )
+      selectinput("color","choose a color:",  
+                  choices = names(t)[possible_class(d)],selected = 'salecondition' )
 ```
 
 ```{r,echo=FALSE,eval=FALSE}
@@ -54,54 +68,54 @@ f(d,'y','x')
 
 
 ```{r,echo=FALSE}
-data<-eventReactive(input$color,{
-  #MoSold
+data<-eventreactive(input$color,{
+  #mosold
   t %>% mutate(!!input$color := as.character(!!rlang::sym(input$color)))
   })
 ```
 
 ```{r,echo=FALSE}
-renderPlot({ 
-  ggplot(data(),aes_string(input$predictor,'SalePriceLog',color=input$color)) + geom_point() 
+renderplot({ 
+  ggplot(data(),aes_string(input$predictor,'salepricelog',color=input$color)) + geom_point() 
   })
 ```
 ```{r,echo=FALSE}
-      selectInput("class","Choose a class:",  
-                  choices = names(t),selected = 'SaleCondition' )
+      selectinput("class","choose a class:",  
+                  choices = names(t),selected = 'salecondition' )
 ```
 ```{r,echo=FALSE}
-renderPlot({ 
-  ggplot(data(),aes_string(input$class,'SalePriceLog',color=as.character(input$color))) + 
+renderplot({ 
+  ggplot(data(),aes_string(input$class,'salepricelog',color=as.character(input$color))) + 
     geom_violin()
   })
 ```
 ```{r,echo=FALSE}
-      selectInput("predictors","Choose a Predictor:",  
-                  choices = names(t),selected = 'X1stFlrSF' , multiple = TRUE)
+      selectinput("predictors","choose a predictor:",  
+                  choices = names(t),selected = 'x1stflrsf' , multiple = true)
 
- #     plotOutput("plot",height = "100%", brush = "brush")  
+ #     plotoutput("plot",height = "100%", brush = "brush")  
 ```
 
 ```{r,echo=FALSE}
-my_model<-eventReactive(input$predictors,{ 
-  my_formula <- paste0('SalePriceLog ~ ',paste(input$predictors,collapse = '+ ', sep=" " ))
+my_model<-eventreactive(input$predictors,{ 
+  my_formula <- paste0('salepricelog ~ ',paste(input$predictors,collapse = '+ ', sep=" " ))
   my_model <- t %>% lm(my_formula,.)  
 })
 ```
 ```{r,echo=FALSE}
-t_augment<- eventReactive(input$predictors,{
+t_augment<- eventreactive(input$predictors,{
   my_model() %>% augment(type.predict = 'response',type.residuals = 'response',data=t) %>%
   mutate(model_resid = .resid) %>%
-  mutate(influential = .cooksd > 4/length(SalePriceLog))
+  mutate(influential = .cooksd > 4/length(salepricelog))
 })
 ```
 #################
-```{r,eval=TRUE,echo=FALSE}
-renderPlot({ 
+```{r,eval=true,echo=FALSE}
+renderplot({ 
   model_num = 1   
   num_of_canadate_features = 15 
   sig <- 0.0010 
-  response <- "SalePriceLog"  
+  response <- "salepricelog"  
   t_types <- sapply(t_augment(),typeof)  
   keep_fields <- !(names(t_augment()) %in% c('SalePrice','Id')) 
   t_numeric_fields <- t_types[t_types != 'character' & keep_fields ] 

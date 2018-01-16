@@ -1,0 +1,173 @@
+---
+title: "Use Elastic Net To Model the Kaggle Housing Data"
+output: html_notebook
+---
+# Prepare the data
+
+## Load the libraries 
+```{r,message=TRUE,echo=FALSE,warning=TRUE,include=FALSE}
+source(file.path('.','library.R'))
+```
+
+## Read the data.
+The new object will be called t.
+```{r,message=TRUE,echo=FALSE,warning=TRUE,include=FALSE}
+source(file.path('.','read_kaggle_housing_data.R'))
+```
+## Include custom functions
+```{r,include=FALSE}
+source(file.path('.','functions.R'))
+```
+
+## Separate the data set into a testing and training data set.
+https://sebastiansauer.github.io/train-test/
+```{r}
+ex <- modelr::resample_partition(t,c(test= 0.3, train = 0.7))
+names(ex)
+typeof(ex)
+model <- lm(SalePriceLog ~ LotArea, data = ex$train)
+```
+```{r}
+model %>% tidy
+rmse(model,ex$train)
+rmse(model,ex$test)
+```
+```{r}
+rsquare(model,ex$train)
+rsquare(model,ex$test)
+```
+```{r}
+mae(model,ex$train)
+mae(model,ex$test)
+```
+```{r}
+qae(model,ex$train)
+qae(model,ex$test)
+```
+## Identify the numeric fields
+There are three type of fields, nominal character, interval number and ordinal character that 
+could be used as interval or nominal character.
+```{r}
+# Create a list of the fields to be considered
+do_not_use <- c('SalePrice','Id')
+response   <- 'SalePriceLog'
+t_names    <- names(t)[! names(t) %in% c(do_not_use,response)] 
+t_names
+```
+Find character fields
+```{r}
+char_names <- t %>% magrittr::extract(t_names) %>% find_fields('character')
+char_names
+```
+
+```{r}
+# First, the fields that could be interval or character
+nc_names   <- t %>% magrittr::extract(t_names) %>% numeric_character
+print(nc_names)
+```
+```{r}
+# Next, the fields that are most likely interval
+interval_names   <- t %>% magrittr::extract(t_names) %>% find_fields(c('integer','double'))
+print(interval_names)
+```
+```{r}
+t_interval <- t[c('SalePriceLog',interval_names)] %>% filter(complete.cases(.))
+head(t_interval)
+t_features <- as.matrix(t_interval[fields])
+
+features <- MatrixModels::model.Matrix(~.,t_interval[fields])[,-1]
+length(features)
+features
+```
+
+
+```{r}
+glmnet(x=features,y=t_interval$SalePriceLog)
+```
+
+```{r}
+MatrixModels::model.Matrix(~.,t[char_names[c(1,2)]])[,-1][1:10,]
+```
+
+
+
+```{r}
+my_formula <- paste0('SalePriceLog ~ ',paste(char_names[c(1,2,4,5,6,7,8,9)],collapse = '+ ', sep=" " ))
+my_formula
+mm<-model_matrix(t,as.formula(my_formula))
+names(mm)
+```
+
+```{r}
+my_model<-glmnetUtils::glmnet(SalePriceLog ~. ,t[c(char_names[c(1,2,4,5,6,7,8,9)],"SalePriceLog")])
+summary(my_model)
+glance(my_model)
+tidy(my_model)
+names(mm)
+typeof(mm)
+names(my_model)
+my_model$lambda
+my_model$a0
+my_model$beta
+plot(my_model)
+(my_model$lambda
+predict(my_model,s=my_model$lambda[],t)
+coef(my_model,s=0)
+broom::tidy(my_model)
+tmp_coeffs <- coef(my_model, s = "lambda.min")
+```
+It is known that the ridge penalty shrinks the coefficients of correlated predictors towards each other while the
+lasso tends to pick one of them and discard the others. The elastic-net penalty mixes these two; 
+```{r}
+data(QuickStartExample)
+```
+```{r}
+typeof(x)
+histogram(as.vector(x))
+```
+
+```{r}
+fit <- glmnet(x,y)
+```
+```{r}
+plot(fit)
+```
+```{r}
+library(glmnet)
+t_train <- mm %>% 
+  filter(row_number() %in% index)
+t_test <- mm %>% 
+  filter(!row_number() %in% index)
+         
+glmnet(t_train,y_train,alpha=1)
+```
+
+
+
+```{r}
+interval_names[interval_names %in% nc_names]
+```
+
+
+```{r}
+t_train_Y <- t_train %>% select(selected_fields) %>% complete.cases %>% select(SalePriceLog) %>% as.matrix
+t_train_Y <- t_train %>% select(selected_fields) %>% complete.cases %>% select(SalePriceLog) %>% as.matrix
+t_train_X <- t_train %>% select(numeric_fields) %>% as.matrix
+class(t_train_Y)
+```
+
+Standardize the numeric fields
+
+```{r}
+names(t_train_X)
+as.matrix(t_train_X[numeric_fields])
+```
+```{r}
+t_train_X
+```
+
+
+```{r}
+fit.lasso <- glmnet(t_train_X,t_train_Y,family="gaussian",alpha=1)
+```
+
